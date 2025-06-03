@@ -19,37 +19,24 @@ export class Planet {
         this.textureLoader = textureLoader;
         this.isLoaded = false;
         
-        this.createPlanet();
+        // Create basic planet first
+        this.createBasicPlanet();
         this.createOrbitPath();
-        if (this.hasRings) {
-            this.createRings();
-        }
         this.updatePosition();
+        
+        // Note: loadTextures() will be called explicitly from main.js
     }
 
-    async createPlanet() {
+    createBasicPlanet() {
         // Planet geometry
         const geometry = new THREE.SphereGeometry(this.radius, 32, 32);
         
-        let material;
-        if (this.textureLoader && this.texture) {
-            // Try to load texture, fallback to color
-            material = await this.textureLoader.createMaterial(
-                this.texture, 
-                this.color,
-                {
-                    emissive: this.color,
-                    emissiveIntensity: 0.05
-                }
-            );
-        } else {
-            // Use basic colored material
-            material = new THREE.MeshLambertMaterial({
-                color: this.color,
-                emissive: this.color,
-                emissiveIntensity: 0.1
-            });
-        }
+        // Start with basic colored material
+        const material = new THREE.MeshLambertMaterial({
+            color: this.color,
+            emissive: this.color,
+            emissiveIntensity: 0.1
+        });
         
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
@@ -68,8 +55,98 @@ export class Planet {
         if (this.radius > 0.4) {
             this.createAtmosphere();
         }
+    }
 
-        this.isLoaded = true;
+    async loadTextures() {
+        try {
+            // Add visible debug message to the page
+            this.addDebugMessage(`Starting texture load for ${this.name}`);
+            
+            // Load planet texture
+            if (this.textureLoader && this.texture) {
+                const texturePath = `/textures/${this.texture}`;
+                console.log(`🎨 Loading texture for ${this.name}: ${texturePath}`);
+                this.addDebugMessage(`Loading texture: ${texturePath}`);
+                
+                // Use white color and no emissive when we have a texture
+                const material = await this.textureLoader.createMaterial(
+                    texturePath, 
+                    0xffffff, // White color so texture shows through
+                    {
+                        // No emissive when we have texture
+                    }
+                );
+                
+                // Debug: Check if material has texture
+                this.addDebugMessage(`Material created. Has texture map: ${material.map ? 'YES' : 'NO'}`);
+                if (material.map) {
+                    this.addDebugMessage(`Texture size: ${material.map.image?.width}x${material.map.image?.height}`);
+                }
+                
+                if (this.mesh) {
+                    const oldMaterial = this.mesh.material;
+                    this.mesh.material.dispose(); // Clean up old material
+                    this.mesh.material = material;
+                    
+                    // Force material update
+                    this.mesh.material.needsUpdate = true;
+                    
+                    console.log(`✅ Texture loaded for ${this.name}`);
+                    this.addDebugMessage(`✅ SUCCESS: ${this.name} texture applied!`);
+                    this.addDebugMessage(`Material color: ${material.color.getHexString()}`);
+                } else {
+                    this.addDebugMessage(`❌ ERROR: No mesh found for ${this.name}`);
+                }
+            } else {
+                this.addDebugMessage(`❌ ERROR: No textureLoader or texture for ${this.name}`);
+            }
+
+            // Load rings if needed
+            if (this.hasRings) {
+                await this.createRings();
+                this.addDebugMessage(`✅ Rings created for ${this.name}`);
+            }
+
+            this.isLoaded = true;
+        } catch (error) {
+            console.warn(`⚠️ Error loading textures for ${this.name}:`, error);
+            this.addDebugMessage(`❌ FAILED: ${this.name} - ${error.message}`);
+            this.isLoaded = true; // Still mark as loaded to prevent retry
+        }
+    }
+
+    addDebugMessage(message) {
+        // Create or get debug container
+        let debugContainer = document.getElementById('texture-debug');
+        if (!debugContainer) {
+            debugContainer = document.createElement('div');
+            debugContainer.id = 'texture-debug';
+            debugContainer.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                font-family: monospace;
+                font-size: 12px;
+                max-width: 400px;
+                max-height: 300px;
+                overflow-y: auto;
+                z-index: 1000;
+            `;
+            document.body.appendChild(debugContainer);
+        }
+        
+        // Add timestamped message
+        const time = new Date().toLocaleTimeString();
+        const messageDiv = document.createElement('div');
+        messageDiv.textContent = `[${time}] ${message}`;
+        debugContainer.appendChild(messageDiv);
+        
+        // Auto-scroll to bottom
+        debugContainer.scrollTop = debugContainer.scrollHeight;
     }
 
     createAtmosphere() {

@@ -30,9 +30,13 @@ class SolarSystem {
         this.frameCount = 0;
         this.fps = 0;
         
-        this.init();
+        this.initialize();
+    }
+
+    async initialize() {
+        await this.init();
         this.setupEventListeners();
-        this.createStars();
+        await this.createStars();
         this.loadSolarSystem();
     }
 
@@ -112,7 +116,36 @@ class SolarSystem {
         });
     }
 
-    createStars() {
+    async createStars() {
+        try {
+            // Load stars texture
+            const starsTexture = await this.textureLoader.loadTexture('/textures/stars.jpg');
+            
+            if (starsTexture) {
+                // Create a large sphere with stars texture as skybox
+                const skyboxGeometry = new THREE.SphereGeometry(2500, 32, 32);
+                const skyboxMaterial = new THREE.MeshBasicMaterial({
+                    map: starsTexture,
+                    side: THREE.BackSide, // Render on the inside
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
+                this.scene.add(skybox);
+                
+                console.log('✅ Stars texture loaded as skybox');
+            } else {
+                // Fallback to point stars if texture fails
+                this.createPointStars();
+            }
+        } catch (error) {
+            console.warn('⚠️ Failed to load stars texture, using point stars:', error);
+            this.createPointStars();
+        }
+    }
+
+    createPointStars() {
         // Enhanced starfield with multiple layers and better mobile performance
         const starLayers = this.isMobile() ? 
             [
@@ -215,6 +248,9 @@ class SolarSystem {
     async createSun() {
         this.sun = new Sun(this.textureLoader);
         this.scene.add(this.sun.getMesh());
+        
+        // Wait for textures to load
+        await this.sun.loadTextures();
     }
 
     async createPlanets() {
@@ -226,6 +262,9 @@ class SolarSystem {
             this.planets.push(planet);
             this.scene.add(planet.getMesh());
             this.scene.add(planet.getOrbitPath());
+            
+            // Wait for planet textures to load
+            await planet.loadTextures();
             
             // Small delay to prevent blocking
             await new Promise(resolve => setTimeout(resolve, 50));

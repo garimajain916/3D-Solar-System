@@ -66,16 +66,30 @@ export class TextureLoader {
     async createMaterial(texturePath, fallbackColor, materialOptions = {}) {
         const texture = await this.loadTexture(texturePath, fallbackColor);
         
-        const defaultOptions = {
-            color: fallbackColor,
-            ...materialOptions
-        };
-
+        let defaultOptions;
+        
         if (texture) {
-            defaultOptions.map = texture;
+            // When we have a texture, use enhanced settings for visibility
+            defaultOptions = {
+                map: texture,
+                color: 0xffffff, // White base color
+                emissive: 0x222222, // Slight self-illumination to ensure visibility
+                emissiveIntensity: 0.1,
+                shininess: 30,
+                ...materialOptions
+            };
+        } else {
+            // Only use fallback color when texture fails to load
+            defaultOptions = {
+                color: fallbackColor,
+                emissive: 0x000000,
+                shininess: 30,
+                ...materialOptions
+            };
         }
 
-        return new THREE.MeshLambertMaterial(defaultOptions);
+        // Use MeshPhongMaterial for better lighting response and visibility
+        return new THREE.MeshPhongMaterial(defaultOptions);
     }
 
     /**
@@ -88,18 +102,24 @@ export class TextureLoader {
         const texture = await this.loadTexture(texturePath, fallbackColor);
         
         const materialOptions = {
-            color: fallbackColor,
             transparent: true,
             opacity: 0.8,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            shininess: 30
         };
 
         if (texture) {
             materialOptions.map = texture;
             materialOptions.alphaMap = texture;
+            materialOptions.color = 0xffffff; // White so texture shows through
+            materialOptions.emissive = 0x111111; // Slight glow for rings
+            materialOptions.emissiveIntensity = 0.05;
+        } else {
+            materialOptions.color = fallbackColor;
+            materialOptions.emissive = 0x000000;
         }
 
-        return new THREE.MeshLambertMaterial(materialOptions);
+        return new THREE.MeshPhongMaterial(materialOptions);
     }
 
     /**

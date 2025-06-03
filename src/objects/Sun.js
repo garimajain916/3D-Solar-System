@@ -5,32 +5,25 @@ export class Sun {
         this.group = new THREE.Group();
         this.textureLoader = textureLoader;
         this.isLoaded = false;
-        this.createSun();
+        
+        // Create basic sun first
+        this.createBasicSun();
         this.createGlow();
         this.createCorona();
+        
+        // Note: loadTextures() will be called explicitly from main.js
     }
 
-    async createSun() {
+    createBasicSun() {
         // Main sun sphere with higher detail
         const geometry = new THREE.SphereGeometry(2.5, 64, 64);
         
-        let material;
-        if (this.textureLoader) {
-            material = await this.textureLoader.createMaterial(
-                '/textures/sun.jpg',
-                0xfdb813,
-                {
-                    emissive: 0xfdb813,
-                    emissiveIntensity: 0.6
-                }
-            );
-        } else {
-            material = new THREE.MeshBasicMaterial({
-                color: 0xfdb813,
-                emissive: 0xfdb813,
-                emissiveIntensity: 0.4
-            });
-        }
+        // Start with basic material
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xfdb813,
+            emissive: 0xfdb813,
+            emissiveIntensity: 0.4
+        });
         
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.userData = { 
@@ -51,8 +44,78 @@ export class Sun {
         
         this.surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
         this.group.add(this.surface);
+    }
 
-        this.isLoaded = true;
+    async loadTextures() {
+        try {
+            this.addDebugMessage('Starting Sun texture load');
+            
+            if (this.textureLoader) {
+                console.log('🌞 Loading Sun texture: /textures/sun.jpg');
+                this.addDebugMessage('Loading Sun texture: /textures/sun.jpg');
+                
+                const material = await this.textureLoader.createMaterial(
+                    '/textures/sun.jpg',
+                    0xffffff,
+                    {
+                        emissive: 0xfdb813,
+                        emissiveIntensity: 0.3
+                    }
+                );
+                
+                if (this.mesh) {
+                    this.mesh.material.dispose(); // Clean up old material
+                    this.mesh.material = material;
+                    console.log('✅ Sun texture loaded successfully');
+                    this.addDebugMessage('✅ SUCCESS: Sun texture loaded!');
+                    this.addDebugMessage(`Material color: ${material.color.getHexString()}`);
+                } else {
+                    this.addDebugMessage('❌ ERROR: No mesh found for Sun');
+                }
+            } else {
+                this.addDebugMessage('❌ ERROR: No textureLoader for Sun');
+            }
+            
+            this.isLoaded = true;
+        } catch (error) {
+            console.warn('⚠️ Error loading Sun texture:', error);
+            this.addDebugMessage(`❌ FAILED: Sun - ${error.message}`);
+            this.isLoaded = true; // Still mark as loaded
+        }
+    }
+
+    addDebugMessage(message) {
+        // Create or get debug container
+        let debugContainer = document.getElementById('texture-debug');
+        if (!debugContainer) {
+            debugContainer = document.createElement('div');
+            debugContainer.id = 'texture-debug';
+            debugContainer.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 10px;
+                border-radius: 5px;
+                font-family: monospace;
+                font-size: 12px;
+                max-width: 400px;
+                max-height: 300px;
+                overflow-y: auto;
+                z-index: 1000;
+            `;
+            document.body.appendChild(debugContainer);
+        }
+        
+        // Add timestamped message
+        const time = new Date().toLocaleTimeString();
+        const messageDiv = document.createElement('div');
+        messageDiv.textContent = `[${time}] ${message}`;
+        debugContainer.appendChild(messageDiv);
+        
+        // Auto-scroll to bottom
+        debugContainer.scrollTop = debugContainer.scrollHeight;
     }
 
     createGlow() {
@@ -80,7 +143,7 @@ export class Sun {
         });
 
         // Primary point light to illuminate planets
-        this.light = new THREE.PointLight(0xffffff, 3, 2000);
+        this.light = new THREE.PointLight(0xffffff, 8, 3000);
         this.light.position.set(0, 0, 0);
         this.light.castShadow = true;
         this.light.shadow.mapSize.width = 2048;
@@ -90,12 +153,12 @@ export class Sun {
         this.group.add(this.light);
 
         // Secondary warm light for atmospheric effect
-        this.secondaryLight = new THREE.PointLight(0xffaa44, 1, 1000);
+        this.secondaryLight = new THREE.PointLight(0xffaa44, 2, 1500);
         this.secondaryLight.position.set(0, 0, 0);
         this.group.add(this.secondaryLight);
 
         // Ambient light for general illumination
-        this.ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+        this.ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         this.group.add(this.ambientLight);
     }
 
@@ -175,8 +238,8 @@ export class Sun {
 
         // Subtle light intensity variation
         if (this.light) {
-            const lightPulse = Math.sin(Date.now() * 0.002) * 0.3 + 1;
-            this.light.intensity = 3 * lightPulse;
+            const lightPulse = Math.sin(Date.now() * 0.002) * 0.5 + 1;
+            this.light.intensity = 8 * lightPulse;
         }
     }
 

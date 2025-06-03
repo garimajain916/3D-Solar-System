@@ -102,7 +102,8 @@ export const TEXTURE_PATHS = {
     uranus: '/textures/uranus.jpg',
     neptune: '/textures/neptune.jpg',
     saturnRings: '/textures/saturn-rings.png',
-    uranusRings: '/textures/uranus-rings.png'
+    uranusRings: '/textures/uranus-rings.png',
+    stars: '/textures/stars.jpg'
 };
 
 // Animation and visual constants

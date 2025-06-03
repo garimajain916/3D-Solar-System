@@ -8,52 +8,47 @@ export class TextureLoader {
     }
 
     /**
-     * Load a texture with fallback to solid color
-     * @param {string} texturePath - Path to the texture file
-     * @param {number} fallbackColor - Hex color to use if texture fails to load
+     * Load a single texture with fallback
+     * @param {string} path - Path to the texture
+     * @param {number} fallbackColor - Fallback color if texture fails
      * @returns {Promise<THREE.Texture|null>}
      */
-    async loadTexture(texturePath, fallbackColor = 0xffffff) {
-        // Check if texture is already loaded
-        if (this.loadedTextures.has(texturePath)) {
-            return this.loadedTextures.get(texturePath);
+    async loadTexture(path, fallbackColor = 0xffffff) {
+        if (!path) {
+            console.warn('No texture path provided');
+            return null;
         }
 
-        // Check if texture is currently being loaded
-        if (this.loadingPromises.has(texturePath)) {
-            return this.loadingPromises.get(texturePath);
-        }
-
-        // Start loading the texture
-        const loadingPromise = new Promise((resolve) => {
-            this.loader.load(
-                texturePath,
-                // Success callback
+        return new Promise((resolve) => {
+            const loader = new THREE.TextureLoader();
+            
+            // Set a timeout to prevent hanging
+            const timeout = setTimeout(() => {
+                console.warn(`Texture loading timeout for: ${path}`);
+                resolve(null);
+            }, 10000); // 10 second timeout
+            
+            loader.load(
+                path,
+                // Success
                 (texture) => {
+                    clearTimeout(timeout);
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
-                    texture.colorSpace = THREE.SRGBColorSpace;
-                    this.loadedTextures.set(texturePath, texture);
-                    this.loadingPromises.delete(texturePath);
-                    console.log(`✅ Loaded texture: ${texturePath}`);
+                    console.log(`✓ Texture loaded successfully: ${path}`);
                     resolve(texture);
                 },
-                // Progress callback
-                (progress) => {
-                    // Optional: handle loading progress
-                },
-                // Error callback
+                // Progress
+                undefined,
+                // Error
                 (error) => {
-                    console.warn(`⚠️ Failed to load texture: ${texturePath}. Using fallback color.`);
-                    this.loadedTextures.set(texturePath, null);
-                    this.loadingPromises.delete(texturePath);
+                    clearTimeout(timeout);
+                    console.warn(`Failed to load texture: ${path}`, error);
+                    console.warn(`Using fallback color: ${fallbackColor.toString(16)}`);
                     resolve(null);
                 }
             );
         });
-
-        this.loadingPromises.set(texturePath, loadingPromise);
-        return loadingPromise;
     }
 
     /**

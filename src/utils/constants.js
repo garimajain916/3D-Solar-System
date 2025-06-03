@@ -101,21 +101,21 @@ export const PLANET_DATA = {
     }
 };
 
-// Texture paths - you can replace these with actual texture files
+// Texture paths - using relative paths that work in both dev and production
 export const TEXTURE_PATHS = {
-    sun: '/textures/sun.jpg',
-    mercury: '/textures/mercury.jpg',
-    venus: '/textures/venus.jpg',
-    earth: '/textures/earth.jpg',
-    mars: '/textures/mars.jpg',
-    jupiter: '/textures/jupiter.jpg',
-    saturn: '/textures/saturn.jpg',
-    uranus: '/textures/uranus.jpg',
-    neptune: '/textures/neptune.jpg',
-    saturnRings: '/textures/saturn-rings.png',
-    uranusRings: '/textures/uranus-rings.png',
-    stars: '/textures/stars.jpg',
-    moon: '/textures/moon.jpg'
+    sun: './textures/sun.jpg',
+    mercury: './textures/mercury.jpg',
+    venus: './textures/venus.jpg',
+    earth: './textures/earth.jpg',
+    mars: './textures/mars.jpg',
+    jupiter: './textures/jupiter.jpg',
+    saturn: './textures/saturn.jpg',
+    uranus: './textures/uranus.jpg',
+    neptune: './textures/neptune.jpg',
+    saturnRings: './textures/saturn-rings.png',
+    uranusRings: './textures/uranus-rings.png',
+    stars: './textures/stars.jpg',
+    moon: './textures/moon.jpg'
 };
 
 // Animation and visual constants

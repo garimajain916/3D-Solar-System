@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { TEXTURE_PATHS } from '../utils/constants.js';
+import { Moon } from './Moon.js';
 
 export class Planet {
     constructor(options = {}, textureLoader = null) {
@@ -13,6 +15,11 @@ export class Planet {
         this.ringInnerRadius = options.ringInnerRadius || this.radius * 1.5;
         this.ringOuterRadius = options.ringOuterRadius || this.radius * 2;
         this.description = options.description || '';
+        
+        // Moon properties
+        this.hasMoon = options.hasMoon || false;
+        this.moonOptions = options.moonOptions || null;
+        this.moon = null;
         
         this.angle = options.startAngle || 0;
         this.group = new THREE.Group();
@@ -31,11 +38,12 @@ export class Planet {
         // Planet geometry
         const geometry = new THREE.SphereGeometry(this.radius, 32, 32);
         
-        // Start with basic colored material
-        const material = new THREE.MeshLambertMaterial({
+        // Start with basic material that will be replaced by textured material
+        const material = new THREE.MeshStandardMaterial({
             color: this.color,
-            emissive: this.color,
-            emissiveIntensity: 0.1
+            roughness: 0.7,
+            metalness: 0.0
+            // No emissive - we'll add lighting instead
         });
         
         this.mesh = new THREE.Mesh(geometry, material);
@@ -57,61 +65,47 @@ export class Planet {
         }
     }
 
+    /**
+     * Load and apply textures to the planet
+     */
     async loadTextures() {
+        if (!this.textureLoader || !this.texture) {
+            console.log(`No texture loader or texture specified for planet`);
+            return;
+        }
+
         try {
-            // Add visible debug message to the page
-            this.addDebugMessage(`Starting texture load for ${this.name}`);
+            console.log(`Loading texture for planet:`, this.texture);
             
-            // Load planet texture
-            if (this.textureLoader && this.texture) {
-                const texturePath = `/textures/${this.texture}`;
-                console.log(`🎨 Loading texture for ${this.name}: ${texturePath}`);
-                this.addDebugMessage(`Loading texture: ${texturePath}`);
-                
-                // Use white color and no emissive when we have a texture
-                const material = await this.textureLoader.createMaterial(
-                    texturePath, 
-                    0xffffff, // White color so texture shows through
-                    {
-                        // No emissive when we have texture
-                    }
-                );
-                
-                // Debug: Check if material has texture
-                this.addDebugMessage(`Material created. Has texture map: ${material.map ? 'YES' : 'NO'}`);
-                if (material.map) {
-                    this.addDebugMessage(`Texture size: ${material.map.image?.width}x${material.map.image?.height}`);
-                }
-                
-                if (this.mesh) {
-                    const oldMaterial = this.mesh.material;
-                    this.mesh.material.dispose(); // Clean up old material
-                    this.mesh.material = material;
-                    
-                    // Force material update
-                    this.mesh.material.needsUpdate = true;
-                    
-                    console.log(`✅ Texture loaded for ${this.name}`);
-                    this.addDebugMessage(`✅ SUCCESS: ${this.name} texture applied!`);
-                    this.addDebugMessage(`Material color: ${material.color.getHexString()}`);
-                } else {
-                    this.addDebugMessage(`❌ ERROR: No mesh found for ${this.name}`);
-                }
-            } else {
-                this.addDebugMessage(`❌ ERROR: No textureLoader or texture for ${this.name}`);
+            // Get the full texture path from TEXTURE_PATHS
+            const texturePath = TEXTURE_PATHS[this.texture.replace('.jpg', '')];
+            console.log(`Texture path:`, texturePath);
+            
+            // Use the new createMaterial method that guarantees texture visibility
+            const newMaterial = await this.textureLoader.createMaterial(
+                texturePath, 
+                this.color
+            );
+            
+            // Replace the material on the mesh
+            if (this.mesh && this.mesh.material) {
+                this.mesh.material.dispose();
+                this.mesh.material = newMaterial;
+                console.log(`✓ Texture applied successfully for planet`);
             }
-
-            // Load rings if needed
-            if (this.hasRings) {
-                await this.createRings();
-                this.addDebugMessage(`✅ Rings created for ${this.name}`);
+            
+            // Create rings if this planet has them
+            if (this.rings) {
+                this.createRings();
             }
-
-            this.isLoaded = true;
+            
+            // Create moon if this planet has one
+            if (this.hasMoon) {
+                await this.createMoon();
+            }
+            
         } catch (error) {
-            console.warn(`⚠️ Error loading textures for ${this.name}:`, error);
-            this.addDebugMessage(`❌ FAILED: ${this.name} - ${error.message}`);
-            this.isLoaded = true; // Still mark as loaded to prevent retry
+            console.error(`Failed to load texture:`, error);
         }
     }
 
@@ -208,21 +202,41 @@ export class Planet {
     }
 
     createOrbitPath() {
-        // Create more subtle orbit path visualization
+        // Create visible orbit path visualization with planet-specific colors
         const orbitGeometry = new THREE.RingGeometry(
-            this.orbitRadius - 0.02, 
-            this.orbitRadius + 0.02, 
+            this.orbitRadius - 0.05, 
+            this.orbitRadius + 0.05, 
             128
         );
+        
+        // Color-code orbits based on planet
+        let orbitColor = 0x666666; // Default gray
+        switch(this.name.toLowerCase()) {
+            case 'mercury': orbitColor = 0x8c7853; break;
+            case 'venus': orbitColor = 0xffa500; break;
+            case 'earth': orbitColor = 0x6b93d6; break;
+            case 'mars': orbitColor = 0xcd5c5c; break;
+            case 'jupiter': orbitColor = 0xd8ca9d; break;
+            case 'saturn': orbitColor = 0xfad5a5; break;
+            case 'uranus': orbitColor = 0x4fd0e7; break;
+            case 'neptune': orbitColor = 0x4b70dd; break;
+        }
+        
         const orbitMaterial = new THREE.MeshBasicMaterial({
-            color: 0x444444,
+            color: orbitColor,
             transparent: true,
-            opacity: 0.15,
+            opacity: 0.6, // Much more visible
             side: THREE.DoubleSide
         });
         
         this.orbitPath = new THREE.Mesh(orbitGeometry, orbitMaterial);
         this.orbitPath.rotation.x = Math.PI / 2; // Lay flat
+        
+        // Add orbit label for identification
+        this.orbitPath.userData = {
+            name: `${this.name} Orbit`,
+            type: 'orbit'
+        };
     }
 
     updatePosition() {
@@ -252,6 +266,11 @@ export class Planet {
         // Slowly rotate rings
         if (this.rings) {
             this.rings.rotation.z += deltaTime * speedMultiplier * 0.001;
+        }
+        
+        // Update moon if it exists
+        if (this.moon) {
+            this.moon.update(deltaTime, speedMultiplier);
         }
     }
 
@@ -316,5 +335,25 @@ export class Planet {
             this.orbitPath.geometry.dispose();
             this.orbitPath.material.dispose();
         }
+    }
+
+    async createMoon() {
+        if (!this.hasMoon || !this.moonOptions) return;
+
+        console.log(`Creating moon for ${this.name}`);
+        
+        // Create moon with the provided options
+        this.moon = new Moon(this.moonOptions, this.textureLoader);
+        
+        // Load moon textures
+        await this.moon.loadTextures();
+        
+        // Add moon to planet's group so it follows the planet
+        this.group.add(this.moon.getMesh());
+        
+        // Add moon's orbit path to the scene (it will be relative to the planet)
+        this.group.add(this.moon.getOrbitPath());
+        
+        console.log(`✓ Moon created for ${this.name}`);
     }
 } 

@@ -30,7 +30,18 @@ export const PLANET_DATA = {
         orbitSpeed: 0.030,
         rotationSpeed: 0.02,
         texture: 'earth.jpg',
-        description: 'Our beautiful blue home planet'
+        description: 'Our beautiful blue home planet',
+        hasMoon: true,
+        moonOptions: {
+            name: 'Moon',
+            radius: 0.27, // Moon is about 27% the size of Earth
+            color: 0x999999,
+            orbitRadius: 2.5, // Distance from Earth
+            orbitSpeed: 0.05, // Moon orbits Earth relatively quickly
+            rotationSpeed: 0.005,
+            texture: 'moon',
+            description: "Earth's natural satellite"
+        }
     },
     mars: {
         name: 'Mars',
@@ -103,7 +114,8 @@ export const TEXTURE_PATHS = {
     neptune: '/textures/neptune.jpg',
     saturnRings: '/textures/saturn-rings.png',
     uranusRings: '/textures/uranus-rings.png',
-    stars: '/textures/stars.jpg'
+    stars: '/textures/stars.jpg',
+    moon: '/textures/moon.jpg'
 };
 
 // Animation and visual constants

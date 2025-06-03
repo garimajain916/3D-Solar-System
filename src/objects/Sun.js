@@ -9,7 +9,6 @@ export class Sun {
         // Create basic sun first
         this.createBasicSun();
         this.createGlow();
-        this.createCorona();
         
         // Note: loadTextures() will be called explicitly from main.js
     }
@@ -119,11 +118,10 @@ export class Sun {
     }
 
     createGlow() {
-        // Multiple glow layers for more realistic effect
+        // Cleaner, more subtle glow layers
         const glowLayers = [
-            { radius: 3.2, color: 0xffaa00, opacity: 0.15 },
-            { radius: 4.0, color: 0xff6600, opacity: 0.08 },
-            { radius: 5.0, color: 0xff4400, opacity: 0.04 }
+            { radius: 3.0, color: 0xffaa00, opacity: 0.08 },
+            { radius: 3.5, color: 0xff6600, opacity: 0.04 }
         ];
 
         this.glowMeshes = [];
@@ -142,8 +140,8 @@ export class Sun {
             this.group.add(glowMesh);
         });
 
-        // Primary point light to illuminate planets
-        this.light = new THREE.PointLight(0xffffff, 8, 3000);
+        // Primary point light to illuminate planets - much brighter for texture visibility
+        this.light = new THREE.PointLight(0xffffff, 15, 3000); // Much higher intensity
         this.light.position.set(0, 0, 0);
         this.light.castShadow = true;
         this.light.shadow.mapSize.width = 2048;
@@ -153,52 +151,18 @@ export class Sun {
         this.group.add(this.light);
 
         // Secondary warm light for atmospheric effect
-        this.secondaryLight = new THREE.PointLight(0xffaa44, 2, 1500);
+        this.secondaryLight = new THREE.PointLight(0xffaa44, 3, 1500); // Increased intensity
         this.secondaryLight.position.set(0, 0, 0);
         this.group.add(this.secondaryLight);
 
-        // Ambient light for general illumination
-        this.ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        // Strong ambient light for bright texture visibility
+        this.ambientLight = new THREE.AmbientLight(0x404040, 0.8); // Much higher ambient light
         this.group.add(this.ambientLight);
-    }
 
-    createCorona() {
-        // Solar corona effect using particles
-        const coronaGeometry = new THREE.BufferGeometry();
-        const coronaVertices = [];
-        const coronaColors = [];
-
-        // Create corona particles
-        for (let i = 0; i < 2000; i++) {
-            // Random position around the sun
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI;
-            const radius = 3 + Math.random() * 4;
-
-            const x = radius * Math.sin(phi) * Math.cos(theta);
-            const y = radius * Math.sin(phi) * Math.sin(theta);
-            const z = radius * Math.cos(phi);
-
-            coronaVertices.push(x, y, z);
-
-            // Corona colors (orange to yellow)
-            const intensity = 0.5 + Math.random() * 0.5;
-            coronaColors.push(1.0, intensity * 0.7, intensity * 0.3);
-        }
-
-        coronaGeometry.setAttribute('position', new THREE.Float32BufferAttribute(coronaVertices, 3));
-        coronaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(coronaColors, 3));
-
-        const coronaMaterial = new THREE.PointsMaterial({
-            size: 0.1,
-            transparent: true,
-            opacity: 0.6,
-            vertexColors: true,
-            blending: THREE.AdditiveBlending
-        });
-
-        this.corona = new THREE.Points(coronaGeometry, coronaMaterial);
-        this.group.add(this.corona);
+        // Stronger directional light for texture definition
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.6); // Increased intensity
+        this.directionalLight.position.set(5, 5, 5);
+        this.group.add(this.directionalLight);
     }
 
     update(deltaTime) {
@@ -219,27 +183,17 @@ export class Sun {
             glowMesh.scale.setScalar(pulse);
             
             // Vary opacity slightly
-            const baseOpacity = [0.15, 0.08, 0.04][index];
+            const baseOpacity = [0.08, 0.04][index];
             glowMesh.material.opacity = baseOpacity * pulse;
             
             // Slowly rotate each glow layer
             glowMesh.rotation.y += deltaTime * (0.1 + index * 0.05);
         });
 
-        // Animate corona
-        if (this.corona) {
-            this.corona.rotation.y += deltaTime * 0.02;
-            this.corona.rotation.x += deltaTime * 0.01;
-            
-            // Pulse corona opacity
-            const coronaPulse = Math.sin(Date.now() * 0.003) * 0.2 + 0.8;
-            this.corona.material.opacity = 0.6 * coronaPulse;
-        }
-
         // Subtle light intensity variation
         if (this.light) {
-            const lightPulse = Math.sin(Date.now() * 0.002) * 0.5 + 1;
-            this.light.intensity = 8 * lightPulse;
+            const lightPulse = Math.sin(Date.now() * 0.002) * 0.3 + 1;
+            this.light.intensity = 15 * lightPulse;
         }
     }
 
@@ -271,9 +225,5 @@ export class Sun {
             glowMesh.geometry.dispose();
             glowMesh.material.dispose();
         });
-        if (this.corona) {
-            this.corona.geometry.dispose();
-            this.corona.material.dispose();
-        }
     }
 } 

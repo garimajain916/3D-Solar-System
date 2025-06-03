@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Sun } from './objects/Sun.js';
 import { Planet } from './objects/Planet.js';
+import { Moon } from './objects/Moon.js';
 import { AsteroidBelt } from './objects/AsteroidBelt.js';
 import { TextureLoader } from './utils/TextureLoader.js';
 import { GUIControls } from './utils/GUIControls.js';
@@ -10,6 +11,7 @@ import { PLANET_DATA, TEXTURE_PATHS, SETTINGS, getPlanetsArray } from './utils/c
 
 class SolarSystem {
     constructor() {
+        console.log('🌌 SolarSystem constructor started...');
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -30,7 +32,11 @@ class SolarSystem {
         this.frameCount = 0;
         this.fps = 0;
         
-        this.initialize();
+        console.log('🚀 Starting async initialization...');
+        this.initialize().catch(error => {
+            console.error('❌ Initialization failed:', error);
+            this.showError(error);
+        });
     }
 
     async initialize() {
@@ -68,7 +74,20 @@ class SolarSystem {
         this.renderer.toneMappingExposure = 0.8;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         
+        // Ensure the app container is properly styled
+        const appContainer = document.getElementById('app');
+        appContainer.style.width = '100vw';
+        appContainer.style.height = '100vh';
+        appContainer.style.position = 'relative';
+        appContainer.style.overflow = 'hidden';
+        
         document.getElementById('app').appendChild(this.renderer.domElement);
+        
+        // Ensure canvas is properly styled
+        this.renderer.domElement.style.display = 'block';
+        this.renderer.domElement.style.position = 'absolute';
+        this.renderer.domElement.style.top = '0';
+        this.renderer.domElement.style.left = '0';
 
         // Controls setup with mobile-friendly settings
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -207,9 +226,9 @@ class SolarSystem {
             this.showLoadingProgress('Creating planets...', 50);
             await this.createPlanets();
             
-            // Create asteroid belt
-            this.showLoadingProgress('Creating asteroid belt...', 80);
-            await this.createAsteroidBelt();
+            // Create asteroid belt - REMOVED
+            // this.showLoadingProgress('Creating asteroid belt...', 80);
+            // await this.createAsteroidBelt();
             
             // Initialize GUI controls
             this.showLoadingProgress('Setting up controls...', 90);
@@ -516,13 +535,13 @@ class SolarSystem {
             planet.update(deltaTime, this.speedMultiplier);
         });
 
-        // Update asteroid belt
-        if (this.asteroidBelt) {
-            this.asteroidBelt.update(deltaTime, this.speedMultiplier);
-            
-            // Optimize asteroid rendering based on camera distance
-            this.asteroidBelt.updateLOD(this.camera.position);
-        }
+        // Update asteroid belt - REMOVED
+        // if (this.asteroidBelt) {
+        //     this.asteroidBelt.update(deltaTime, this.speedMultiplier);
+        //     
+        //     // Optimize asteroid rendering based on camera distance
+        //     this.asteroidBelt.updateLOD(this.camera.position);
+        // }
 
         // Update controls
         this.controls.update();
@@ -551,11 +570,55 @@ class SolarSystem {
         this.textureLoader.dispose();
         this.renderer.dispose();
     }
+
+    showError(error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #ff4444; color: white; padding: 20px; border-radius: 10px;
+            font-family: Arial, sans-serif; z-index: 9999; text-align: center;
+            max-width: 90vw; max-height: 90vh; overflow: auto;
+        `;
+        errorDiv.innerHTML = `
+            <h3>❌ Solar System Error</h3>
+            <p>${error.message || 'Unknown error occurred'}</p>
+            <details style="margin-top: 10px; text-align: left;">
+                <summary>Technical Details</summary>
+                <pre style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; overflow: auto; max-height: 200px;">${error.stack || error}</pre>
+            </details>
+            <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px; background: white; color: #ff4444; border: none; border-radius: 5px; cursor: pointer;">
+                🔄 Refresh Page
+            </button>
+        `;
+        document.body.appendChild(errorDiv);
+    }
 }
 
 // Initialize the solar system when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new SolarSystem();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        console.log('🚀 Starting Solar System initialization...');
+        const solarSystem = new SolarSystem();
+        console.log('✅ Solar System initialized successfully!');
+    } catch (error) {
+        console.error('❌ Failed to initialize Solar System:', error);
+        // Show error message to user
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #ff4444; color: white; padding: 20px; border-radius: 10px;
+            font-family: Arial, sans-serif; z-index: 9999; text-align: center;
+        `;
+        errorDiv.innerHTML = `
+            <h3>❌ Solar System Loading Error</h3>
+            <p>Failed to initialize the 3D Solar System.</p>
+            <p>Please refresh the page and try again.</p>
+            <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px; background: white; color: #ff4444; border: none; border-radius: 5px; cursor: pointer;">
+                🔄 Refresh Page
+            </button>
+        `;
+        document.body.appendChild(errorDiv);
+    }
 });
 
 // Enhanced console messages for Milestone 3
